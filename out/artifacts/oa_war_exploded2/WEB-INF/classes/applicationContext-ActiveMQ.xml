@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:amq="http://activemq.apache.org/schema/core"
+	   xmlns:jms="http://www.springframework.org/schema/jms"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-4.1.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc-4.1.xsd
+        http://www.springframework.org/schema/jms
+        http://www.springframework.org/schema/jms/spring-jms-4.1.xsd
+        http://activemq.apache.org/schema/core
+        http://activemq.apache.org/schema/core/activemq-core-5.12.1.xsd"
+>
+
+
+	<context:component-scan base-package="com.oa.sys" />
+	<amq:connectionFactory id="amqConnectionFactory"
+						   brokerURL="tcp://127.0.0.1:61616"
+						   userName="admin"
+						   password="admin" />
+
+	<!-- 配置JMS连接工长 -->
+	<bean id="connectionFactory"
+		  class="org.springframework.jms.connection.CachingConnectionFactory">
+		<constructor-arg ref="amqConnectionFactory" />
+		<property name="sessionCacheSize" value="100" />
+	</bean>
+
+	<!-- 定义消息队列（Queue） -->
+	<bean id="demoQueueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+		<!-- 设置消息队列的名字 -->
+		<constructor-arg>
+			<value>testSpringQueue</value>
+		</constructor-arg>
+	</bean>
+
+	<!-- 配置JMS模板（Queue），Spring提供的JMS工具类，它发送、接收消息。 -->
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="defaultDestination" ref="demoQueueDestination" />
+		<property name="receiveTimeout" value="10000" />
+		<!-- true是topic，false是queue，默认是false，此处显示写出false -->
+		<property name="pubSubDomain" value="false" />
+	</bean>
+
+
+	<!-- 配置消息队列监听者（Queue） -->
+	<bean id="queueMessageListener" class="learn.filter.QueueMessageListener" />
+
+	<!-- 显示注入消息监听容器（Queue），配置连接工厂，监听的目标是demoQueueDestination，监听器是上面定义的监听器 -->
+	<bean id="queueListenerContainer"
+		  class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="destination" ref="demoQueueDestination" />
+		<property name="messageListener" ref="queueMessageListener" />
+	</bean>
+
+
+
+   
+
+	<!--<context:component-scan base-package="com.oa.sys">-->
+		<!--<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
+	<!--</context:component-scan>-->
+    <!--<context:property-placeholder location = "classpath:jdbc.properties"/>-->
+    <!--<bean id= "dataSource" -->
+   			<!--class= "com.alibaba.druid.pool.DruidDataSource">-->
+	   	<!--<property name="driverClassName" value="${jdbc.driver}"></property>-->
+		<!--<property name="url" value="${jdbc.url}"></property>-->
+		<!--<property name="username" value="${jdbc.user}"></property>-->
+		<!--<property name="password" value="${jdbc.password}"></property>				 		-->
+   	<!--</bean>-->
+	<!--<import resource="redis.xml"/>-->
+   	<!---->
+   	<!--&lt;!&ndash;注册事务管理器  &ndash;&gt;-->
+	<!--<bean id = "txMgr" class = "org.springframework.jdbc.datasource.DataSourceTransactionManager" >-->
+		<!--<property name="dataSource" ref = "dataSource"></property>-->
+	<!--</bean>-->
+
+	<!--&lt;!&ndash;开启事务的注解驱动  &ndash;&gt;-->
+	<!--<tx:annotation-driven transaction-manager="txMgr"/>-->
+
+	<!--&lt;!&ndash;配置mybatis的sqlSessionFactory  &ndash;&gt;-->
+   	<!--<bean id = "sqlSessionFactory" class = "org.mybatis.spring.SqlSessionFactoryBean">-->
+   		<!--<property name="dataSource" ref = "dataSource"></property>-->
+   		<!--<property name="configLocation" value="classpath:mybatis-confige.xml"></property>-->
+   	<!--</bean>-->
+
+	<!--&lt;!&ndash;基于mapper的动态代理的实现&ndash;&gt;-->
+	<!--&lt;!&ndash;<bean id="UserMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">&ndash;&gt;-->
+		<!--&lt;!&ndash;<property name="mapperInterface" value="com.chenyaping.usermapper.UserMapper"/>&ndash;&gt;-->
+		<!--&lt;!&ndash;<property name="sqlSessionFactory" ref="sqlSessionFactory"/>&ndash;&gt;-->
+	<!--&lt;!&ndash;</bean>&ndash;&gt;-->
+	<!--<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">-->
+		<!--<property name="basePackage" value="com.oa.sys.mapper"/>-->
+		<!--<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>-->
+	<!--</bean>-->
+
+  	
+</beans>         

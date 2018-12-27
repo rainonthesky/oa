@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:p="http://www.springframework.org/schema/p"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx 
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+   
+
+	<context:component-scan base-package="com.oa.sys">
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	</context:component-scan>
+    <context:property-placeholder location = "classpath:jdbc.properties,classpath:redis.properties"/>
+    <bean id= "dataSource" 
+   			class= "com.alibaba.druid.pool.DruidDataSource">
+	   	<property name="driverClassName" value="${jdbc.driver}"></property>
+		<property name="url" value="${jdbc.url}"></property>
+		<property name="username" value="${jdbc.user}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+		<!--配置druid的日志文件，主要监视慢sql-->
+		<property name="proxyFilters">
+			<list>
+				<ref bean="stat-filter"/>
+				<ref bean="log-filter"/>
+			</list>
+		</property>
+   	</bean>
+
+	<!-- redis数据源 -->
+	<bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">
+		<property name="maxIdle" value="${redis.maxIdle}" />
+		<property name="maxTotal" value="${redis.maxActive}" />
+		<property name="maxWaitMillis" value="${redis.maxWait}" />
+		<property name="testOnBorrow" value="${redis.testOnBorrow}" />
+	</bean>
+	<!-- Spring-redis连接池管理工厂 -->
+	<bean id="jedisConnectionFactory"
+		  class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+		  p:host-name="${redis.host}" p:port="${redis.port}" p:password="${redis.pass}"
+		  p:pool-config-ref="poolConfig" />
+	<!-- 使用中间类解决RedisCache.jedisConnectionFactory的静态注入，从而使MyBatis实现第三方缓存 -->
+	<bean id="redisCacheTransfer" class="com.oa.sys.redis.RedisCacheTransfer">
+		<property name="jedisConnectionFactory" ref="jedisConnectionFactory" />
+	</bean>
+
+	<!--Druid配置慢sql执行时间及日志拦截器-->
+	<bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+		<!-- 慢sql时间设置,即执行时间大于200毫秒的都是慢sql -->
+		<property name="slowSqlMillis" value="200"/>
+		<property name="logSlowSql" value="true"/>
+	</bean>
+	<!--druid和Log4jFilter进行整合-->
+	<bean id="log-filter" class="com.alibaba.druid.filter.logging.Log4jFilter">
+		<property name="dataSourceLogEnabled" value="true" />
+		<property name="statementExecutableSqlLogEnable" value="true" />
+	</bean>
+
+   	<!--注册事务管理器  -->
+	<bean id = "txMgr" class = "org.springframework.jdbc.datasource.DataSourceTransactionManager" >
+		<property name="dataSource" ref = "dataSource"></property>
+	</bean>
+	<!--开启事务的注解驱动  -->
+	<tx:annotation-driven transaction-manager="txMgr"/>
+
+	<!--配置mybatis的sqlSessionFactory  -->
+   	<bean id = "sqlSessionFactory" class = "org.mybatis.spring.SqlSessionFactoryBean">
+   		<property name="dataSource" ref = "dataSource"></property>
+   		<property name="configLocation" value="classpath:mybatis-confige.xml"></property>
+   	</bean>
+
+	<!--基于mapper的动态代理的实现-->
+	<!--<bean id="UserMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">-->
+		<!--<property name="mapperInterface" value="com.chenyaping.usermapper.UserMapper"/>-->
+		<!--<property name="sqlSessionFactory" ref="sqlSessionFactory"/>-->
+	<!--</bean>-->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.oa.sys.mapper"/>
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+	</bean>
+	<!--注册acitivit引擎-->
+	<bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
+		<property name="processEngineConfiguration" ref="processEngineFactoryBean"/>
+
+	</bean>
+	<!--定义acitivit引擎配置-->
+	<bean id="processEngineFactoryBean" class="org.activiti.spring.SpringProcessEngineConfiguration">
+		<property name="dataSource" ref="dataSource"/>
+		<property name="transactionManager" ref="txMgr"/>
+		<property name="databaseSchemaUpdate" value="false"/>
+	</bean>
+	<!--注册activiti的各种服务接口-->
+	<bean id="repositoryService"
+		  factory-bean="processEngine" factory-method="getRepositoryService"/>
+	<bean id="runtimeService" factory-bean="processEngine" factory-method="getRuntimeService"/>
+	<bean id="taskService" factory-bean="processEngine" factory-method="getTaskService"/>
+	<bean id="historyService" factory-bean="processEngine" factory-method="getHistoryService"/>
+
+
+
+
+
+
+
+
+
+
+
+
+  	
+</beans>         

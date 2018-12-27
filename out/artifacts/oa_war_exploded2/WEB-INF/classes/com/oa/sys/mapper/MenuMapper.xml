@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>  
+<!DOCTYPE mapper   
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+
+<mapper namespace = "com.oa.sys.mapper.MenuMapper">
+	<sql id="all_dict_columns">
+		ID,PARENT_ID,NAME,SORT,HREF,TARGET,
+   		 ICON,IS_SHOW,PERMISSION,UPDATE_BY,UPDATE_DATE,REMARKS
+	</sql>
+
+	<select id="getMenuListById" parameterType="java.lang.Long" resultType="menu">
+		SELECT DISTINCT C.ID,C.PARENT_ID,C.NAME,
+ 		C.SORT,C.HREF,C.TARGET,C.ICON,C.IS_SHOW,C.PERMISSION
+ 		FROM PM_SYS_USER_ROLE A,PM_SYS_ROLE_MENU B,PM_SYS_MENU C
+ 		WHERE  A.USER_ID=#{userId} AND A.ROLE_ID=B.ROLE_ID AND B.MENU_ID=C.ID
+
+	</select>
+	<!--将通用的sql查询条件抽取出来，成为sql片段，给不同方法应用-->
+	<select id="getAllMenuList" resultType="menu">
+		SELECT
+		<include refid="all_dict_columns"></include>
+		FROM PM_SYS_MENU
+	</select>
+	<!--获取某个节点的子节点的数目-->
+	<select id="getChildCount" parameterType="java.lang.Long" resultType="java.lang.Integer">
+		SELECT COUNT(*) FROM PM_SYS_MENU WHERE PARENT_ID = #{parentId};
+	</select>
+	<!--通过id获取菜单的信息-->
+	<select id="getMenuById" parameterType="java.lang.Long" resultType="menu">
+		SELECT C.ID,C.PARENT_ID,C.NAME,C.SORT,C.HREF,C.TARGET,D.NAME AS PARENT_NAME,
+   		 C.ICON,C.IS_SHOW,C.PERMISSION,C.UPDATE_BY,C.UPDATE_DATE,C.REMARKS
+   		 FROM PM_SYS_MENU C LEFT JOIN PM_SYS_MENU D
+   		 ON C.PARENT_ID = D.ID WHERE C.ID=#{menuId}
+	</select>
+	<!--根据角色id查询所对应的菜单-->
+	<select id="getMenuListByUserId"  parameterType="java.lang.Long" resultType="menu">
+		SELECT DISTINCT C.ID,C.PARENT_ID,C.NAME,
+ 		C.SORT,C.HREF,C.TARGET,C.ICON,C.IS_SHOW,C.PERMISSION
+ 		FROM PM_SYS_USER_ROLE A ,PM_SYS_ROLE_MENU B ,PM_SYS_MENU C
+ 		WHERE A.USER_ID= #{userId} AND A.ROLE_ID = B.ROLE_ID AND B.MENU_ID = C.ID
+	</select>
+	<!--增加菜单-->
+	<insert id="addMenu" parameterType="menu">
+		<selectKey keyProperty="id" resultType="long" order="AFTER">
+			SELECT  LAST_INSERT_ID() as id
+		</selectKey>
+		INSERT  INTO PM_SYS_MENU(PARENT_ID,NAME,SORT,HREF,TARGET,
+		ICON,IS_SHOW,PERMISSION,UPDATE_BY,UPDATE_DATE,REMARKS)
+		VALUE (#{parentId},#{name},#{sort},#{href},
+		#{target},#{icon},#{isShow},#{permission},
+		#{updateBy},#{updateDate},#{remarks})
+	</insert>
+	<delete id="delMenu" parameterType="java.lang.Long">
+		DELETE FROM PM_SYS_MENU WHERE ID =#{id}
+	</delete>
+	<!--修改菜单-->
+	<update id="updateMenu" parameterType="menu">
+		UPDATE PM_SYS_MENU
+		<set>
+			<if test="parentId != null">
+				PARENT_ID = #{parentId},
+			</if>
+			<if test="name != null">
+				NAME = #{name},
+			</if>
+			<if test="sort != null">
+				SORT = #{sort},
+			</if>
+			<if test="href != null">
+				HREF = #{href},
+			</if>
+			<if test="target != null">
+				TARGET = #{target},
+			</if>
+			<if test="icon != null">
+				ICON = #{icon},
+			</if>
+			<if test="isShow != null">
+				IS_SHOW = #{isShow},
+			</if>
+			<if test="permission != null">
+				PERMISSION = #{permission},
+			</if>
+			<if test="updateBy != null">
+				UPDATE_BY = #{updateBy},
+			</if>
+			<if test="updateDate != null">
+				UPDATE_DATE = #{updateDate},
+			</if>
+			<if test="remarks != null">
+				REMARKS = #{remarks},
+			</if>
+		</set>
+		WHERE ID = #{id}
+
+	</update>
+
+
+
+
+	
+
+
+
+	 
+</mapper>
